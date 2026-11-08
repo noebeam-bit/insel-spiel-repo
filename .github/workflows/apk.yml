@@ -1,0 +1,64 @@
+# Baut aus dem veröffentlichten Spiel (index.html + musik.mp3) eine Android-Test-APK
+# und legt sie unter dem Release „testversion“ ab:
+# https://github.com/noebeam-bit/insel-spiel-repo/releases/download/testversion/die-insel.apk
+name: Android-APK
+
+on:
+  push:
+    branches: [main]
+    paths: ['index.html', 'musik.mp3', 'app/**', '.github/workflows/apk.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Versionsname aus dem letzten Spiel-Commit
+        run: |
+          NAME=$(git log -1 --format=%s -- index.html | sed 's/^Die Insel //')
+          echo "APP_VERSION_NAME=${NAME:-test}" >> "$GITHUB_ENV"
+          echo "APP_VERSION_CODE=$((100 + ${{ github.run_number }}))" >> "$GITHUB_ENV"
+      - name: Capacitor vorbereiten
+        working-directory: app
+        run: |
+          npm ci --no-audit --no-fund
+          sh build-www.sh
+          npx cap sync android
+      - name: APK bauen
+        working-directory: app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/die-insel.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: die-insel-apk
+          path: die-insel.apk
+      - name: Release „testversion“ aktualisieren
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Die Insel – $APP_VERSION_NAME (Build $APP_VERSION_CODE). Herunterladen, öffnen, installieren. Neue Versionen lassen sich einfach drüberinstallieren, der Spielstand bleibt."
+          if gh release view testversion >/dev/null 2>&1; then
+            gh release edit testversion --title "Die Insel – Test-APK ($APP_VERSION_NAME)" --notes "$NOTES"
+          else
+            gh release create testversion --title "Die Insel – Test-APK ($APP_VERSION_NAME)" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
+          gh release upload testversion die-insel.apk --clobber

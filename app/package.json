@@ -1,0 +1,11 @@
+{
+  "name": "die-insel-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Android-Huelle fuer Die Insel (Capacitor). Baut die APK aus ../index.html und ../musik.mp3.",
+  "dependencies": {
+    "@capacitor/android": "7.6.10",
+    "@capacitor/cli": "7.6.10",
+    "@capacitor/core": "7.6.10"
+  }
+}

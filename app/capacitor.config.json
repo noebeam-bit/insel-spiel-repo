@@ -1,0 +1,9 @@
+{
+  "appId": "io.github.noebeambit.dieinsel",
+  "appName": "Die Insel",
+  "webDir": "www",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "auto",
+    "backgroundColor": "#000000"
+  }
+}
